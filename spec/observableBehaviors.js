@@ -10,6 +10,11 @@ describe('Observable', function() {
         expect(ko.isObservable(instance)).toEqual(true);
     });
 
+    it('Should advertise that instances are not pure computed', function () {
+        var instance = ko.observable();
+        expect(ko.isPureComputed(instance)).toEqual(false);
+    });
+
     it('Should be able to write values to it', function () {
         var instance = new ko.observable();
         instance(123);
@@ -38,6 +43,7 @@ describe('Observable', function() {
     it('Should advertise that instances can have values written to them', function () {
         var instance = new ko.observable(function () { });
         expect(ko.isWriteableObservable(instance)).toEqual(true);
+        expect(ko.isWritableObservable(instance)).toEqual(true);
     });
 
     it('Should be able to read back most recent value', function () {

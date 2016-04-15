@@ -22,16 +22,16 @@
         }
 
         defaultConfigRegistry[componentName] = config;
-    }
+    };
 
     ko.components.isRegistered = function(componentName) {
-        return componentName in defaultConfigRegistry;
-    }
+        return defaultConfigRegistry.hasOwnProperty(componentName);
+    };
 
     ko.components.unregister = function(componentName) {
         delete defaultConfigRegistry[componentName];
         ko.components.clearCachedDefinition(componentName);
-    }
+    };
 
     ko.components.defaultLoader = {
         'getConfig': function(componentName, callback) {
@@ -113,12 +113,12 @@
             var element = templateConfig['element'];
             if (isDomElement(element)) {
                 // Element instance - copy its child nodes
-                callback(ko.utils.cloneNodes(element.childNodes));
+                callback(cloneNodesFromTemplateSourceElement(element));
             } else if (typeof element === 'string') {
                 // Element ID - find it, then copy its child nodes
                 var elemInstance = document.getElementById(element);
                 if (elemInstance) {
-                    callback(ko.utils.cloneNodes(elemInstance.childNodes));
+                    callback(cloneNodesFromTemplateSourceElement(elemInstance));
                 } else {
                     errorCallback('Cannot find element with ID ' + element);
                 }
@@ -156,6 +156,25 @@
         }
     }
 
+    function cloneNodesFromTemplateSourceElement(elemInstance) {
+        switch (ko.utils.tagNameLower(elemInstance)) {
+            case 'script':
+                return ko.utils.parseHtmlFragment(elemInstance.text);
+            case 'textarea':
+                return ko.utils.parseHtmlFragment(elemInstance.value);
+            case 'template':
+                // For browsers with proper <template> element support (i.e., where the .content property
+                // gives a document fragment), use that document fragment.
+                if (isDocumentFragment(elemInstance.content)) {
+                    return ko.utils.cloneNodes(elemInstance.content.childNodes);
+                }
+        }
+
+        // Regular elements such as <div>, and <template> elements on old browsers that don't really
+        // understand <template> and just treat it as a regular container
+        return ko.utils.cloneNodes(elemInstance.childNodes);
+    }
+
     function isDomElement(obj) {
         if (window['HTMLElement']) {
             return obj instanceof HTMLElement;
@@ -175,8 +194,8 @@
     function possiblyGetConfigFromAmd(errorCallback, config, callback) {
         if (typeof config['require'] === 'string') {
             // The config is the value of an AMD module
-            if (require || window['require']) {
-                (require || window['require'])([config['require']], callback);
+            if (amdRequire || window['require']) {
+                (amdRequire || window['require'])([config['require']], callback);
             } else {
                 errorCallback('Uses require, but no AMD loader is present');
             }
